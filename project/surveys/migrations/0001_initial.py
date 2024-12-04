@@ -94,4 +94,70 @@ class Migration(migrations.Migration):
                 'unique_together': {('user', 'survey')},
             },
         ),
+        migrations.RunSQL(
+            '''
+            -- Функция для генерации минимального положительного числа
+            CREATE OR REPLACE FUNCTION assign_option_number()
+            RETURNS TRIGGER AS $$
+            DECLARE
+                next_number INT;
+            BEGIN
+                IF NEW.number IS NULL THEN
+                    -- Найти минимальное положительное число, которое отсутствует для данного question_id
+                    SELECT MIN(number + 1) 
+                    INTO next_number
+                    FROM option
+                    WHERE question_id = NEW.question_id
+                      AND NOT EXISTS (
+                          SELECT 1 
+                          FROM option 
+                          WHERE question_id = NEW.question_id AND number = number + 1
+                      );
+
+                    -- Если все заняты, начать с 1
+                    NEW.number := COALESCE(next_number, 1);
+                END IF;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+
+            -- Триггер для таблицы OPTION
+            CREATE TRIGGER option_number_trigger
+            BEFORE INSERT ON option
+            FOR EACH ROW
+            EXECUTE FUNCTION assign_option_number();
+
+
+            -- Функция для пересчёта номеров после удаления
+            CREATE OR REPLACE FUNCTION renumber_options()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                -- Обновить номера оставшихся опций
+                UPDATE option
+                SET number = subquery.new_number
+                FROM (
+                    SELECT id, ROW_NUMBER() OVER (ORDER BY number) AS new_number
+                    FROM option
+                    WHERE question_id = OLD.question_id
+                ) AS subquery
+                WHERE option.id = subquery.id;
+
+                RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+
+            -- Триггер для вызова функции после удаления
+            CREATE TRIGGER renumber_options_trigger
+            AFTER DELETE ON option
+            FOR EACH ROW
+            EXECUTE FUNCTION renumber_options();
+            ''',
+            reverse_sql='''
+               -- Команды для отмены миграции
+               DROP TRIGGER IF EXISTS option_number_trigger ON option;
+               DROP FUNCTION IF EXISTS assign_option_number;
+               DROP TRIGGER IF EXISTS renumber_options_trigger ON option;
+               DROP FUNCTION IF EXISTS renumber_options;
+               '''
+        ),
     ]

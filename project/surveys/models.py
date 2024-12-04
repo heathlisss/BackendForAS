@@ -24,6 +24,10 @@ class Survey(models.Model):
     def __str__(self):
         return self.title
 
+    def delete(self, *args, **kwargs):
+        Answer.objects.filter(option__question__survey=self).delete()
+        super().delete(*args, **kwargs)
+
     class Meta:
         db_table = 'survey'
         constraints = [
@@ -77,7 +81,7 @@ class Option(models.Model):
 
 class Answer(models.Model):
     user = models.ForeignKey(AppUser, on_delete=models.CASCADE)
-    option = models.ForeignKey(Option, on_delete=models.CASCADE)
+    option = models.ForeignKey(Option, on_delete=models.PROTECT)
 
     class Meta:
         db_table = 'answer'
