@@ -50,7 +50,7 @@ class SurveyAdministrator(models.Model):
         unique_together = ('user', 'survey')
 
 
-class Question(models.Model):
+class  Question(models.Model):
     survey = models.ForeignKey(Survey, on_delete=models.CASCADE)
     type = models.IntegerField()  # Можно заменить на choices для типов вопросов
     text = models.TextField(blank=True, null=True)
