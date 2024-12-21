@@ -6,7 +6,7 @@ class AppUser(models.Model):
     username = models.CharField(max_length=64, unique=True)
     password = models.CharField(max_length=32)
     email = models.EmailField(max_length=256, blank=True, null=True)
-    image_url = models.URLField(max_length=1024, blank=True, null=True)
+    admin = models.BooleanField(default=False)
 
     def __str__(self):
         return self.username
@@ -54,7 +54,6 @@ class  Question(models.Model):
     survey = models.ForeignKey(Survey, on_delete=models.CASCADE)
     type = models.IntegerField()  # Можно заменить на choices для типов вопросов
     text = models.TextField(blank=True, null=True)
-    image = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return f"Question {self.id} in Survey {self.survey.id}"
@@ -66,17 +65,9 @@ class  Question(models.Model):
 class Option(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE)
     text = models.TextField(blank=True, null=True)
-    number = models.IntegerField()
 
     class Meta:
         db_table = 'option'
-        unique_together = ('question', 'number')
-
-    # def save(self, *args, **kwargs):
-    #     if self.pk is None and self.number is None:
-    #         existing_numbers = Option.objects.filter(question=self.question).values_list('number', flat=True)
-    #         self.number = min(set(range(1, max(existing_numbers, default=0) + 2)) - set(existing_numbers))
-    #     super().save(*args, **kwargs)
 
 
 class Answer(models.Model):
