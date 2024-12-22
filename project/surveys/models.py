@@ -4,7 +4,7 @@ from django.db.models import Q, F
 
 class AppUser(models.Model):
     username = models.CharField(max_length=64, unique=True)
-    password = models.CharField(max_length=32)
+    password = models.CharField(max_length=256)
     email = models.EmailField(max_length=256, blank=True, null=True)
     admin = models.BooleanField(default=False)
 
