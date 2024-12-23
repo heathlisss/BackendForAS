@@ -1,5 +1,8 @@
 ﻿from django.db import models
 from django.db.models import Q, F
+from django.db.models.functions import Now
+from django.utils.timezone import now as django_now
+from rest_framework.exceptions import ValidationError
 
 
 class AppUser(models.Model):
@@ -28,13 +31,19 @@ class Survey(models.Model):
         Answer.objects.filter(option__question__survey=self).delete()
         super().delete(*args, **kwargs)
 
+    def clean(self):
+        if self.start_date < django_now().date():
+            raise ValidationError("The start date cannot be in the past.")
+        if self.end_date and self.start_date >= self.end_date:
+            raise ValidationError("The end date must be later than the start date.")
+
     class Meta:
         db_table = 'survey'
         constraints = [
             models.CheckConstraint(
                 check=(
-                        Q(start_date__gte=models.functions.Now()) &
-                        (Q(end_date__isnull=True) | Q(start_date__lt=F('end_date')))
+                        Q(start_date__gte=Now()) &
+                        (Q(end_date__isnull=True) | Q(start_date__lte=F('end_date')))
                 ),
                 name='check_dates'
             )
