@@ -1,10 +1,11 @@
 from django.contrib.auth.hashers import make_password, check_password
+from rest_framework.exceptions import ValidationError
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
-from .models import AppUser, Survey, SurveyAdministrator
-from .serializers import AppUserSerializer, SurveySerializer
+from .models import AppUser, Survey, SurveyAdministrator, Question, Option
+from .serializers import AppUserSerializer, SurveySerializer, QuestionSerializer, OptionSerializer
 
 
 class UserView(APIView):
@@ -147,3 +148,139 @@ class SurveyAllView(APIView):
             surveys = Survey.objects.all()
             surveys_data = SurveySerializer(surveys, many=True).data
             return Response(surveys_data, status=status.HTTP_200_OK)
+
+
+class QuestionView(APIView):
+
+    def post(self, request):
+        serializer = QuestionSerializer(data=request.data)
+        if serializer.is_valid():
+            try:
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            except ValidationError as e:
+                return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            errors = serializer.errors
+            if 'survey' in errors and isinstance(errors['survey'], list):
+                if 'Invalid pk' in errors['survey'][0]:
+                    return Response({"error": "Survey with the provided ID does not exist."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+    def delete(self, request, pk):
+        question = get_object_or_404(Question, pk=pk)
+        question.delete()
+        return Response({"message": "Question deleted successfully"}, status=status.HTTP_200_OK)
+
+
+    def get(self, request, pk):
+        question = get_object_or_404(Question, pk=pk)
+        serializer = QuestionSerializer(question)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+    def put(self, request, pk):
+        try:
+            question = Question.objects.get(pk=pk)
+        except Question.DoesNotExist:
+            return Response({"error": "Question not found."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = QuestionSerializer(question, data=request.data, partial=True)
+        if serializer.is_valid():
+            try:
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            except ValidationError as e:
+                return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            errors = serializer.errors
+            if 'survey' in errors and isinstance(errors['survey'], list):
+                for error in errors['survey']:
+                    if "Invalid pk" in error:
+                        return Response({"error": "Survey with the provided ID does not exist."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class QuestionAllView(APIView):
+    def get(self, request, pk=None):
+        if pk is not None:
+            try:
+                survey = Survey.objects.get(pk=pk)
+            except Survey.DoesNotExist:
+                return Response({"error": "Survey not found."}, status=status.HTTP_404_NOT_FOUND)
+            questions = Question.objects.filter(survey=survey)
+            questions_data = QuestionSerializer(questions, many=True).data
+            return Response(questions_data, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "Survey ID is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class OptionView(APIView):
+
+    def post(self, request):
+        serializer = OptionSerializer(data=request.data)
+        if serializer.is_valid():
+            try:
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            except ValidationError as e:
+                return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            errors = serializer.errors
+            if 'question' in errors and isinstance(errors['question'], list):
+                if 'Invalid pk' in errors['question'][0]:
+                    return Response({"error": "Question with the provided ID does not exist."},status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+    def delete(self, request, pk):
+        try:
+            option = Option.objects.get(pk=pk)
+            option.delete()
+            return Response({"message": "Option deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+        except Option.DoesNotExist:
+            return Response({"error": "Option not found."}, status=status.HTTP_404_NOT_FOUND)
+
+
+    def get(self, request, pk):
+        try:
+            option = Option.objects.get(pk=pk)
+            serializer = OptionSerializer(option)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Option.DoesNotExist:
+            return Response({"error": "Option not found."}, status=status.HTTP_404_NOT_FOUND)
+
+
+    def put(self, request, pk):
+        try:
+            option = Option.objects.get(pk=pk)
+        except Option.DoesNotExist:
+            return Response({"error": "Option not found."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = OptionSerializer(option, data=request.data, partial=True)
+        if serializer.is_valid():
+            try:
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            except ValidationError as e:
+                return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            errors = serializer.errors
+            if 'question' in errors and isinstance(errors['question'], list):
+                for error in errors['question']:
+                    if "Invalid pk" in error:
+                        return Response({"error": "Question with the provided ID does not exist."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class OptionAllView(APIView):
+    def get(self, request, pk=None):
+        if pk is not None:
+            try:
+                question = Question.objects.get(pk=pk)
+            except Question.DoesNotExist:
+                return Response({"error": "Question not found."}, status=status.HTTP_404_NOT_FOUND)
+            options = Option.objects.filter(question=question)
+            options_data = OptionSerializer(options, many=True).data
+            return Response(options_data, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "Question ID is required."}, status=status.HTTP_400_BAD_REQUEST)

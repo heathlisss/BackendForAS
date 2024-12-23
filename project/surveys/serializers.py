@@ -1,7 +1,7 @@
 from django.utils.timezone import now as django_now
 from rest_framework import serializers
 
-from .models import AppUser, Survey, Question, SurveyAdministrator
+from .models import AppUser, Survey, Question, SurveyAdministrator, Option
 
 
 class AppUserSerializer(serializers.ModelSerializer):
@@ -20,15 +20,15 @@ class AppUserSerializer(serializers.ModelSerializer):
 
 
 class SurveySerializer(serializers.ModelSerializer):
-    questions = serializers.SerializerMethodField()
+    #questions = serializers.SerializerMethodField()
     admins = serializers.SerializerMethodField()
 
     class Meta:
         model = Survey
-        fields = ['id', 'title', 'description', 'start_date', 'end_date', 'questions', 'admins']
+        fields = ['id', 'title', 'description', 'start_date', 'end_date', 'admins']
 
-    def get_questions(self, obj):
-        return list(Question.objects.filter(survey=obj).distinct().values_list('id', flat=True))
+    # def get_questions(self, obj):
+    #     return list(Question.objects.filter(survey=obj).distinct().values_list('id', flat=True))
 
     def get_admins(self, obj):
         return list(SurveyAdministrator.objects.filter(survey=obj).values_list('user_id', flat=True))
@@ -40,11 +40,35 @@ class SurveySerializer(serializers.ModelSerializer):
 
         start_date = data.get('start_date', current_start_date)
         end_date = data.get('end_date', current_end_date)
-
         if start_date and start_date < django_now().date():
             raise serializers.ValidationError({"error_start_date": "The start date cannot be in the past."})
-
         if start_date and end_date and start_date >= end_date:
             raise serializers.ValidationError({"error_end_date": "The end date must be later than the start date."})
-
         return data
+
+
+class QuestionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Question
+        fields = ['id', 'survey', 'type', 'text']
+
+    def create(self, validated_data):
+        return Question.objects.create(**validated_data)
+
+    def update(self, instance, validated_data):
+        instance.survey = validated_data.get('survey', instance.survey)
+        instance.type = validated_data.get('type', instance.type)
+        instance.text = validated_data.get('text', instance.text)
+        instance.save()
+        return instance
+
+
+class OptionSerializer(serializers.ModelSerializer):
+    selected_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Option
+        fields = ['id', 'question', 'text', 'selected_count']
+
+    def get_selected_count(self, obj):
+        return obj.answer_set.count()  # Подсчёт количества раз, когда вариант был выбран
