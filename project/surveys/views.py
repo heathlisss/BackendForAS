@@ -5,8 +5,6 @@ from rest_framework import status
 from django.shortcuts import get_object_or_404
 from .models import AppUser, Survey, SurveyAdministrator
 from .serializers import AppUserSerializer, SurveySerializer
-from rest_framework.exceptions import ValidationError
-from django.db import IntegrityError
 
 
 class UserView(APIView):
@@ -60,7 +58,6 @@ class UserView(APIView):
 
 
 class UserViewLogIn(APIView):
-
     def post(self, request):
         username = request.data.get('username')
         password = request.data.get('password')
@@ -77,6 +74,23 @@ class UserViewLogIn(APIView):
         else:
             return Response({"error": "Invalid password"}, status=status.HTTP_400_BAD_REQUEST)
 
+
+class UserAllView(APIView):
+    def get(self, request, pk=None):
+        if pk is not None:
+            survey_admins = SurveyAdministrator.objects.filter(survey_id=pk).select_related('user')
+            if not survey_admins.exists():
+                return Response({"message": "No administrators found for this survey."}, status=status.HTTP_404_NOT_FOUND)
+            admins_data = AppUserSerializer([admin.user for admin in survey_admins], many=True).data
+            for admin in admins_data:
+                admin.pop('password', None)
+            return Response(admins_data, status=status.HTTP_200_OK)
+        else:
+            users = AppUser.objects.all()
+            users_data = AppUserSerializer(users, many=True).data
+            for user in users_data:
+                user.pop('password', None)
+            return Response(users_data, status=status.HTTP_200_OK)
 
 
 class SurveyView(APIView):
@@ -114,18 +128,22 @@ class SurveyView(APIView):
     def put(self, request, pk):
         survey = get_object_or_404(Survey, pk=pk)
         serializer = SurveySerializer(survey, data=request.data, partial=True)
-        if serializer.is_valid():  # Здесь также вызывается validate
+        if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# class Survey///
-#     def get(self, request):
-#         user_id = request.query_params.get('user_id')  # Получаем id пользователя из параметров запроса
-#         if user_id:
-#             surveys = Survey.objects.filter(surveyadministrator__user__id=user_id)
-#         else:
-#             surveys = Survey.objects.all()
-#
-#         serializer = SurveySerializer(surveys, many=True)
-#         return Response(serializer.data, status=status.HTTP_200_OK)
+
+class SurveyAllView(APIView):
+    def get(self, request, pk=None):
+        if pk is not None:
+            admin_surveys = SurveyAdministrator.objects.filter(user_id=pk).select_related('survey')
+            surveys = [admin.survey for admin in admin_surveys]
+            if not surveys:
+                return Response({"message": "No surveys found for this user."}, status=status.HTTP_404_NOT_FOUND)
+            surveys_data = SurveySerializer(surveys, many=True).data
+            return Response(surveys_data, status=status.HTTP_200_OK)
+        else:
+            surveys = Survey.objects.all()
+            surveys_data = SurveySerializer(surveys, many=True).data
+            return Response(surveys_data, status=status.HTTP_200_OK)
