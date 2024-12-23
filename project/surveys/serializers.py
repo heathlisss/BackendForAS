@@ -34,8 +34,17 @@ class SurveySerializer(serializers.ModelSerializer):
         return list(SurveyAdministrator.objects.filter(survey=obj).values_list('user_id', flat=True))
 
     def validate(self, data):
-        if data['start_date'] < django_now().date():
-            raise serializers.ValidationError("The start date cannot be in the past.")
-        if data.get('end_date') and data['start_date'] >= data['end_date']:
-            raise serializers.ValidationError("The end date must be later than the start date.")
+        instance = self.instance
+        current_start_date = instance.start_date if instance else None
+        current_end_date = instance.end_date if instance else None
+
+        start_date = data.get('start_date', current_start_date)
+        end_date = data.get('end_date', current_end_date)
+
+        if start_date and start_date < django_now().date():
+            raise serializers.ValidationError({"error_start_date": "The start date cannot be in the past."})
+
+        if start_date and end_date and start_date >= end_date:
+            raise serializers.ValidationError({"error_end_date": "The end date must be later than the start date."})
+
         return data
