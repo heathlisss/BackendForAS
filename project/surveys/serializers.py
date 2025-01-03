@@ -1,7 +1,7 @@
 from django.utils.timezone import now as django_now
 from rest_framework import serializers
 
-from .models import AppUser, Survey, Question, SurveyAdministrator, Option
+from .models import AppUser, Survey, Question, SurveyAdministrator, Option, Answer
 
 
 class AppUserSerializer(serializers.ModelSerializer):
@@ -50,14 +50,13 @@ class SurveySerializer(serializers.ModelSerializer):
 class QuestionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Question
-        fields = ['id', 'survey', 'type', 'text']
+        fields = ['id', 'survey', 'text']
 
     def create(self, validated_data):
         return Question.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
         instance.survey = validated_data.get('survey', instance.survey)
-        instance.type = validated_data.get('type', instance.type)
         instance.text = validated_data.get('text', instance.text)
         instance.save()
         return instance
@@ -72,3 +71,4 @@ class OptionSerializer(serializers.ModelSerializer):
 
     def get_selected_count(self, obj):
         return obj.answer_set.count()  # Подсчёт количества раз, когда вариант был выбран
+

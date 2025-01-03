@@ -61,7 +61,6 @@ class SurveyAdministrator(models.Model):
 
 class  Question(models.Model):
     survey = models.ForeignKey(Survey, on_delete=models.CASCADE)
-    type = models.IntegerField()  # Можно заменить на choices для типов вопросов
     text = models.TextField(blank=True, null=True)
 
     def __str__(self):

@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
-from .models import AppUser, Survey, SurveyAdministrator, Question, Option
+from .models import AppUser, Survey, SurveyAdministrator, Question, Option, Answer
 from .serializers import AppUserSerializer, SurveySerializer, QuestionSerializer, OptionSerializer
 
 
@@ -284,3 +284,4 @@ class OptionAllView(APIView):
             return Response(options_data, status=status.HTTP_200_OK)
         else:
             return Response({"error": "Question ID is required."}, status=status.HTTP_400_BAD_REQUEST)
+
