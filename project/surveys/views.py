@@ -1,5 +1,6 @@
 from django.contrib.auth.hashers import make_password, check_password
 from django.db import transaction
+from django.db.models import Q
 from rest_framework.exceptions import ValidationError
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -136,19 +137,41 @@ class SurveyView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+# class SurveyAllView(APIView):
+#     def get(self, request, pk=None):
+#         if pk is not None:
+#             admin_surveys = SurveyAdministrator.objects.filter(user_id=pk).select_related('survey')
+#             surveys = [admin.survey for admin in admin_surveys]
+#             if not surveys:
+#                 return Response({"message": "No surveys found for this user."}, status=status.HTTP_404_NOT_FOUND)
+#             surveys_data = SurveySerializer(surveys, many=True).data
+#             return Response(surveys_data, status=status.HTTP_200_OK)
+#         else:
+#             surveys = Survey.objects.all()
+#             surveys_data = SurveySerializer(surveys, many=True).data
+#             return Response(surveys_data, status=status.HTTP_200_OK)
+
+
 class SurveyAllView(APIView):
     def get(self, request, pk=None):
+        search_query = request.GET.get('search', None)
         if pk is not None:
             admin_surveys = SurveyAdministrator.objects.filter(user_id=pk).select_related('survey')
             surveys = [admin.survey for admin in admin_surveys]
             if not surveys:
                 return Response({"message": "No surveys found for this user."}, status=status.HTTP_404_NOT_FOUND)
-            surveys_data = SurveySerializer(surveys, many=True).data
-            return Response(surveys_data, status=status.HTTP_200_OK)
         else:
             surveys = Survey.objects.all()
-            surveys_data = SurveySerializer(surveys, many=True).data
-            return Response(surveys_data, status=status.HTTP_200_OK)
+        if search_query:
+            surveys = surveys.filter(
+                Q(title__icontains=search_query) |
+                Q(description__icontains=search_query) |
+                Q(surveyadministrator__user__username__icontains=search_query)
+            ).distinct()
+        if not surveys:
+            return Response({"message": "No surveys match the search criteria."}, status=status.HTTP_404_NOT_FOUND)
+        surveys_data = SurveySerializer(surveys, many=True).data
+        return Response(surveys_data, status=status.HTTP_200_OK)
 
 
 class QuestionView(APIView):

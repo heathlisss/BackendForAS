@@ -11,7 +11,7 @@ urlpatterns = [
 
     path('api/surveys/', SurveyView.as_view(), name='survey_create'), #POST - Создание опроса
     path('api/surveys/<int:pk>/', SurveyView.as_view(), name='survey_detail'),  # PUT - Обновление опроса, DELETE - Удаление опроса, GET - один опрос
-    path('api/surveys/all/', SurveyAllView.as_view(), name='survey_all'),  # GET - Все опросы
+    path('api/surveys/all/', SurveyAllView.as_view(), name='survey_all'),  # GET - Все опросы,
     path('api/surveys/user/<int:pk>/', SurveyAllView.as_view(), name='admins_survey'), # GET - Все опросы пользователя
 
     path('api/questions/', QuestionView.as_view(), name='question_create'),  # POST - Создание вопроса
