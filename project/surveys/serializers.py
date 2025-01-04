@@ -1,3 +1,4 @@
+from django.db.models import Count
 from django.utils.timezone import now as django_now
 from rest_framework import serializers
 
@@ -22,6 +23,7 @@ class AppUserSerializer(serializers.ModelSerializer):
 class SurveySerializer(serializers.ModelSerializer):
     #questions = serializers.SerializerMethodField()
     admins = serializers.SerializerMethodField()
+    number_of_respondents = serializers.SerializerMethodField()
 
     class Meta:
         model = Survey
@@ -34,7 +36,9 @@ class SurveySerializer(serializers.ModelSerializer):
         return list(SurveyAdministrator.objects.filter(survey=obj).values_list('user_id', flat=True))
 
     def get_number_of_respondents(self, obj):
-        return obj.answer_user_set.count()
+        questions = obj.question_set.count()
+        return (AppUser.objects.filter(answer__option__question__survey=obj).annotate(answered_questions=Count('answer__option__question', distinct=True))
+                             .filter( answered_questions=questions).distinct().count())
 
     def validate(self, data):
         instance = self.instance
