@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import UserView, UserViewLogIn, SurveyView, UserAllView, SurveyAllView, QuestionView, QuestionAllView, \
-    OptionView, OptionAllView
+    OptionView, OptionAllView, AnswerView
 
 urlpatterns = [
     path('api/users/', UserView.as_view(), name='user_create'),  # POST - Создание пользователя
@@ -22,5 +22,6 @@ urlpatterns = [
     path('api/options/<int:pk>/', OptionView.as_view(), name='option_detail'),  # GET, PUT, DELETE
     path('api/options/question/<int:pk>/', OptionAllView.as_view(), name='options_question'),  #GET - все варианты (по question_id)
 
+    path('api/answer/', AnswerView.as_view(), name='answer'),  #  POST, DELETE
 ]
 

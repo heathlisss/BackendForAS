@@ -1,4 +1,5 @@
 from django.contrib.auth.hashers import make_password, check_password
+from django.db import transaction
 from rest_framework.exceptions import ValidationError
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -151,7 +152,6 @@ class SurveyAllView(APIView):
 
 
 class QuestionView(APIView):
-
     def post(self, request):
         serializer = QuestionSerializer(data=request.data)
         if serializer.is_valid():
@@ -285,3 +285,60 @@ class OptionAllView(APIView):
         else:
             return Response({"error": "Question ID is required."}, status=status.HTTP_400_BAD_REQUEST)
 
+
+class AnswerView(APIView):
+    def post(self, request, *args, **kwargs):
+        user_id = request.GET.get('user')
+        survey_id = request.GET.get('survey')
+        answers = request.data
+        if not user_id or not survey_id:
+            return Response({"error": "User and Survey are required in query parameters."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            user = AppUser.objects.get(id=user_id)
+            survey = Survey.objects.get(id=survey_id)
+        except (AppUser.DoesNotExist, Survey.DoesNotExist):
+            return Response({"error": "Invalid user or survey ID."}, status=status.HTTP_404_NOT_FOUND)
+        survey_questions = Question.objects.filter(survey=survey)
+        answered_question_ids = {answer['question'] for answer in answers}
+
+        missing_questions = survey_questions.exclude(id__in=answered_question_ids)
+        if missing_questions.exists():
+            return Response({"error": "Answers are missing for some questions."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            with transaction.atomic():
+                created_answers = []
+                for answer in answers:
+                    question_id = answer.get('question')
+                    option_ids = answer.get('options', [])
+
+                    if not option_ids:
+                        raise ValueError(f"Question {question_id} has no selected options.")
+
+                    question = Question.objects.get(id=question_id, survey=survey)
+                    for option_id in option_ids:
+                        option = Option.objects.get(id=option_id, question=question)
+
+                        created_answer, created = Answer.objects.get_or_create(
+                            user=user,
+                            option=option
+                        )
+                        if created:
+                            created_answers.append(created_answer)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({"message": "Answers successfully created."}, status=status.HTTP_201_CREATED)
+
+
+    def delete(self, request, *args, **kwargs):
+        user_id = request.GET.get('user')
+        survey_id = request.GET.get('survey')
+        if not user_id or not survey_id:
+            return Response({"error": "User and Survey are required in query parameters."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            user = AppUser.objects.get(id=user_id)
+            survey = Survey.objects.get(id=survey_id)
+        except (AppUser.DoesNotExist, Survey.DoesNotExist):
+            return Response({"error": "Invalid user or survey ID."}, status=status.HTTP_404_NOT_FOUND)
+        deleted_count, _ = Answer.objects.filter(user=user, option__question__survey=survey).delete()
+        return Response({"message": f"Deleted {deleted_count} answers."}, status=status.HTTP_200_OK)

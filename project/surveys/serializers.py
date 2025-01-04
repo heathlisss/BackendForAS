@@ -25,13 +25,16 @@ class SurveySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Survey
-        fields = ['id', 'title', 'description', 'start_date', 'end_date', 'admins']
+        fields = ['id', 'title', 'description', 'start_date', 'end_date', 'admins', 'number_of_respondents']
 
     # def get_questions(self, obj):
     #     return list(Question.objects.filter(survey=obj).distinct().values_list('id', flat=True))
 
     def get_admins(self, obj):
         return list(SurveyAdministrator.objects.filter(survey=obj).values_list('user_id', flat=True))
+
+    def get_number_of_respondents(self, obj):
+        return obj.answer_user_set.count()
 
     def validate(self, data):
         instance = self.instance
@@ -71,4 +74,3 @@ class OptionSerializer(serializers.ModelSerializer):
 
     def get_selected_count(self, obj):
         return obj.answer_set.count()  # Подсчёт количества раз, когда вариант был выбран
-
