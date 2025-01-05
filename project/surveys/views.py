@@ -8,6 +8,7 @@ from rest_framework import status
 from django.shortcuts import get_object_or_404
 from .models import AppUser, Survey, SurveyAdministrator, Question, Option, Answer
 from .serializers import AppUserSerializer, SurveySerializer, QuestionSerializer, OptionSerializer
+from .utils import create_token
 
 
 class UserView(APIView):
@@ -18,9 +19,11 @@ class UserView(APIView):
             data['password'] = make_password(data['password'])
         serializer = AppUserSerializer(data=data)
         if serializer.is_valid():
-            serializer.save()
+            user = serializer.save()
+            token = create_token(user.id)
             response_data = serializer.data
             response_data.pop('password', None)
+            response_data['token'] = token
             return Response(response_data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -71,8 +74,10 @@ class UserViewLogIn(APIView):
             return Response({"error": "Invalid username"}, status=status.HTTP_404_NOT_FOUND)
 
         if check_password(password, user.password):
+            token = create_token(user.id)
             response_data = AppUserSerializer(user).data
             response_data.pop('password', None)
+            response_data['token'] = token
             return Response(response_data, status=status.HTTP_200_OK)
         else:
             return Response({"error": "Invalid password"}, status=status.HTTP_400_BAD_REQUEST)
