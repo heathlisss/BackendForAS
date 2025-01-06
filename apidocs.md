@@ -128,6 +128,7 @@ Request Body:
     "description": "?",
     "start_date": "2025-12-25",
     "end_date": "2026-01-31",
+    "activity": true,
     "admins": [7] 
 }
 ```
