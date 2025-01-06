@@ -1,5 +1,5 @@
 from django.db.models import Count
-from django.utils.timezone import now as django_now
+from django.utils.timezone import now as django_now, now
 from rest_framework import serializers
 
 from .models import AppUser, Survey, Question, SurveyAdministrator, Option, Answer
@@ -24,13 +24,18 @@ class SurveySerializer(serializers.ModelSerializer):
     #questions = serializers.SerializerMethodField()
     admins = serializers.SerializerMethodField()
     number_of_respondents = serializers.SerializerMethodField()
+    active = serializers.SerializerMethodField()
 
     class Meta:
         model = Survey
-        fields = ['id', 'title', 'description', 'start_date', 'end_date', 'admins', 'number_of_respondents']
+        fields = ['id', 'title', 'description', 'start_date', 'end_date','active', 'admins', 'number_of_respondents']
 
     # def get_questions(self, obj):
     #     return list(Question.objects.filter(survey=obj).distinct().values_list('id', flat=True))
+
+    def get_active(self, obj):
+        current_date = now().date()  # Get the current date
+        return obj.start_date <= current_date and (obj.end_date is None or obj.end_date > current_date)
 
     def get_admins(self, obj):
         return list(SurveyAdministrator.objects.filter(survey=obj).values_list('user_id', flat=True))

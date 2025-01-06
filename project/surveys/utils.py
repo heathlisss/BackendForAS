@@ -15,7 +15,7 @@ def create_token(user_id):
     payload = {
         "user_id": user_id,
         "iat": datetime.datetime.utcnow(),
-        "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=72)  # Срок действия
+        "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=720)  # Срок действия
     }
     token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
     return token
