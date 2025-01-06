@@ -8,10 +8,9 @@ from rest_framework import status
 from django.shortcuts import get_object_or_404
 from .models import AppUser, Survey, SurveyAdministrator, Question, Option, Answer
 from .serializers import AppUserSerializer, SurveySerializer, QuestionSerializer, OptionSerializer
-from .utils import create_token
+from .utils import create_token, TokenAuthenticationMixin
 
-
-class UserView(APIView):
+class UserViewCreate(APIView):
 
     def post(self, request):
         data = request.data
@@ -26,6 +25,9 @@ class UserView(APIView):
             response_data['token'] = token
             return Response(response_data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserView(TokenAuthenticationMixin, APIView):
 
     def delete(self, request, pk):
         try:
@@ -83,7 +85,7 @@ class UserViewLogIn(APIView):
             return Response({"error": "Invalid password"}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class UserAllView(APIView):
+class UserAllView(TokenAuthenticationMixin, APIView):
     def get(self, request, pk=None):
         if pk is not None:
             survey_admins = SurveyAdministrator.objects.filter(survey_id=pk).select_related('user')
@@ -101,8 +103,7 @@ class UserAllView(APIView):
             return Response(users_data, status=status.HTTP_200_OK)
 
 
-class SurveyView(APIView):
-
+class SurveyView(TokenAuthenticationMixin, APIView):
     def post(self, request):
         data = request.data
         serializer = SurveySerializer(data=data)
@@ -142,22 +143,7 @@ class SurveyView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# class SurveyAllView(APIView):
-#     def get(self, request, pk=None):
-#         if pk is not None:
-#             admin_surveys = SurveyAdministrator.objects.filter(user_id=pk).select_related('survey')
-#             surveys = [admin.survey for admin in admin_surveys]
-#             if not surveys:
-#                 return Response({"message": "No surveys found for this user."}, status=status.HTTP_404_NOT_FOUND)
-#             surveys_data = SurveySerializer(surveys, many=True).data
-#             return Response(surveys_data, status=status.HTTP_200_OK)
-#         else:
-#             surveys = Survey.objects.all()
-#             surveys_data = SurveySerializer(surveys, many=True).data
-#             return Response(surveys_data, status=status.HTTP_200_OK)
-
-
-class SurveyAllView(APIView):
+class SurveyAllView(TokenAuthenticationMixin, APIView):
     def get(self, request, pk=None):
         search_query = request.GET.get('search', None)
         if pk is not None:
@@ -179,7 +165,7 @@ class SurveyAllView(APIView):
         return Response(surveys_data, status=status.HTTP_200_OK)
 
 
-class QuestionView(APIView):
+class QuestionView(TokenAuthenticationMixin, APIView):
     def post(self, request):
         serializer = QuestionSerializer(data=request.data)
         if serializer.is_valid():
@@ -229,7 +215,7 @@ class QuestionView(APIView):
             return Response(errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class QuestionAllView(APIView):
+class QuestionAllView(TokenAuthenticationMixin, APIView):
     def get(self, request, pk=None):
         if pk is not None:
             try:
@@ -243,7 +229,7 @@ class QuestionAllView(APIView):
             return Response({"error": "Survey ID is required."}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class OptionView(APIView):
+class OptionView(TokenAuthenticationMixin, APIView):
 
     def post(self, request):
         serializer = OptionSerializer(data=request.data)
@@ -300,7 +286,7 @@ class OptionView(APIView):
             return Response(errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class OptionAllView(APIView):
+class OptionAllView(TokenAuthenticationMixin, APIView):
     def get(self, request, pk=None):
         if pk is not None:
             try:
@@ -314,7 +300,7 @@ class OptionAllView(APIView):
             return Response({"error": "Question ID is required."}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class AnswerView(APIView):
+class AnswerView(TokenAuthenticationMixin, APIView):
     def post(self, request, *args, **kwargs):
         user_id = request.GET.get('user')
         survey_id = request.GET.get('survey')

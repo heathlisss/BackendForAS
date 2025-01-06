@@ -1,9 +1,9 @@
 from django.urls import path
 from .views import UserView, UserViewLogIn, SurveyView, UserAllView, SurveyAllView, QuestionView, QuestionAllView, \
-    OptionView, OptionAllView, AnswerView
+    OptionView, OptionAllView, AnswerView, UserViewCreate
 
 urlpatterns = [
-    path('api/users/', UserView.as_view(), name='user_create'),  # POST - Создание пользователя
+    path('api/users/', UserViewCreate.as_view(), name='user_create'),  # POST - Создание пользователя
     path('api/users/<int:pk>/', UserView.as_view(), name='user_detail'),  # GET - Информация о пользователе, PUT - Обновление, DELETE - Удаление
     path('api/login/', UserViewLogIn.as_view(), name='user_login'),
     path('api/users/all/', UserAllView.as_view(), name='all_users'),  # GET - Получение всех пользователей
