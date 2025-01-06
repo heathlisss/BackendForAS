@@ -24,7 +24,7 @@ class UserViewCreate(APIView):
             response_data.pop('password', None)
             response_data['token'] = token
             return Response(response_data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": "Username is not available"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class UserView(TokenAuthenticationMixin, APIView):
@@ -43,26 +43,29 @@ class UserView(TokenAuthenticationMixin, APIView):
             user = AppUser.objects.get(pk=pk)
         except AppUser.DoesNotExist:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-
         data = request.data
+        if 'admin' in data:
+            data.pop('admin')
         if 'password' in data:
             data['password'] = make_password(data['password'])
-
         serializer = AppUserSerializer(user, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
             response_data = serializer.data
             response_data.pop('password', None)
             return Response(response_data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": "Username is not available"}, status=status.HTTP_400_BAD_REQUEST)
 
 
     def get(self, request, pk):
-        user = get_object_or_404(AppUser, pk=pk)
-        serializer = AppUserSerializer(user)
-        response_data = serializer.data
-        response_data.pop('password', None)
-        return Response(response_data, status=status.HTTP_200_OK)
+        try:
+            user = AppUser.objects.get(pk=pk)
+            serializer = AppUserSerializer(user)
+            response_data = serializer.data
+            response_data.pop('password', None)
+            return Response(response_data, status=status.HTTP_200_OK)
+        except AppUser.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
 class UserViewLogIn(APIView):
@@ -117,7 +120,7 @@ class SurveyView(TokenAuthenticationMixin, APIView):
                     SurveyAdministrator.objects.create(user=admin, survey=survey)
                     successful_admins.append(user_id)
                 except AppUser.DoesNotExist:
-                    continue  # Игнорируем несуществующих администраторов
+                    continue
             response_data = serializer.data
             response_data["admins"] = successful_admins
             return Response(response_data, status=status.HTTP_201_CREATED)
@@ -125,22 +128,31 @@ class SurveyView(TokenAuthenticationMixin, APIView):
 
 
     def delete(self, request, pk):
-        survey = get_object_or_404(Survey, pk=pk)
-        survey.delete()
-        return Response({"message": "Survey deleted successfully"}, status=status.HTTP_200_OK)
+        try:
+            survey = Survey.objects.get(pk=pk)
+            survey.delete()
+            return Response({"message": "Survey deleted successfully"}, status=status.HTTP_200_OK)
+        except Survey.DoesNotExist:
+            return Response({"error": "Survey not found"}, status=status.HTTP_404_NOT_FOUND)
 
     def get(self, request, pk):
-        survey = get_object_or_404(Survey, pk=pk)
-        serializer = SurveySerializer(survey)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        try:
+             survey = Survey.objects.get(pk=pk)
+             serializer = SurveySerializer(survey)
+             return Response(serializer.data, status=status.HTTP_200_OK)
+        except Survey.DoesNotExist:
+            return Response({"error": "Survey not found"}, status=status.HTTP_404_NOT_FOUND)
 
     def put(self, request, pk):
-        survey = get_object_or_404(Survey, pk=pk)
-        serializer = SurveySerializer(survey, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            survey = Survey.objects.get(pk=pk)
+            serializer = SurveySerializer(survey, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Survey.DoesNotExist:
+            return Response({"error": "Survey not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
 class SurveyAllView(TokenAuthenticationMixin, APIView):
@@ -178,20 +190,26 @@ class QuestionView(TokenAuthenticationMixin, APIView):
             errors = serializer.errors
             if 'survey' in errors and isinstance(errors['survey'], list):
                 if 'Invalid pk' in errors['survey'][0]:
-                    return Response({"error": "Survey with the provided ID does not exist."}, status=status.HTTP_400_BAD_REQUEST)
+                    return Response({"error": "Survey not found"}, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
     def delete(self, request, pk):
-        question = get_object_or_404(Question, pk=pk)
-        question.delete()
-        return Response({"message": "Question deleted successfully"}, status=status.HTTP_200_OK)
+        try:
+            question = Question.objects.get( pk=pk)
+            question.delete()
+            return Response({"message": "Question deleted successfully"}, status=status.HTTP_200_OK)
+        except Question.DoesNotExist:
+            return Response({"error": "Question not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
     def get(self, request, pk):
-        question = get_object_or_404(Question, pk=pk)
-        serializer = QuestionSerializer(question)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        try:
+            question = Question.objects.get( pk=pk)
+            serializer = QuestionSerializer(question)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Question.DoesNotExist:
+            return Response({"error": "Question not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
     def put(self, request, pk):
@@ -211,7 +229,7 @@ class QuestionView(TokenAuthenticationMixin, APIView):
             if 'survey' in errors and isinstance(errors['survey'], list):
                 for error in errors['survey']:
                     if "Invalid pk" in error:
-                        return Response({"error": "Survey with the provided ID does not exist."}, status=status.HTTP_400_BAD_REQUEST)
+                        return Response({"error": "Survey not found"}, status=status.HTTP_400_BAD_REQUEST)
             return Response(errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -243,7 +261,7 @@ class OptionView(TokenAuthenticationMixin, APIView):
             errors = serializer.errors
             if 'question' in errors and isinstance(errors['question'], list):
                 if 'Invalid pk' in errors['question'][0]:
-                    return Response({"error": "Question with the provided ID does not exist."},status=status.HTTP_400_BAD_REQUEST)
+                    return Response({"error": "Question not found"},status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -253,7 +271,7 @@ class OptionView(TokenAuthenticationMixin, APIView):
             option.delete()
             return Response({"message": "Option deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
         except Option.DoesNotExist:
-            return Response({"error": "Option not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Option not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
     def get(self, request, pk):
@@ -262,14 +280,14 @@ class OptionView(TokenAuthenticationMixin, APIView):
             serializer = OptionSerializer(option)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Option.DoesNotExist:
-            return Response({"error": "Option not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Option not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
     def put(self, request, pk):
         try:
             option = Option.objects.get(pk=pk)
         except Option.DoesNotExist:
-            return Response({"error": "Option not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Option not found"}, status=status.HTTP_404_NOT_FOUND)
         serializer = OptionSerializer(option, data=request.data, partial=True)
         if serializer.is_valid():
             try:
@@ -282,7 +300,7 @@ class OptionView(TokenAuthenticationMixin, APIView):
             if 'question' in errors and isinstance(errors['question'], list):
                 for error in errors['question']:
                     if "Invalid pk" in error:
-                        return Response({"error": "Question with the provided ID does not exist."}, status=status.HTTP_400_BAD_REQUEST)
+                        return Response({"error": "Question not found"}, status=status.HTTP_400_BAD_REQUEST)
             return Response(errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -292,12 +310,12 @@ class OptionAllView(TokenAuthenticationMixin, APIView):
             try:
                 question = Question.objects.get(pk=pk)
             except Question.DoesNotExist:
-                return Response({"error": "Question not found."}, status=status.HTTP_404_NOT_FOUND)
+                return Response({"error": "Question not found"}, status=status.HTTP_404_NOT_FOUND)
             options = Option.objects.filter(question=question)
             options_data = OptionSerializer(options, many=True).data
             return Response(options_data, status=status.HTTP_200_OK)
         else:
-            return Response({"error": "Question ID is required."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Question ID is required"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class AnswerView(TokenAuthenticationMixin, APIView):
@@ -306,18 +324,18 @@ class AnswerView(TokenAuthenticationMixin, APIView):
         survey_id = request.GET.get('survey')
         answers = request.data
         if not user_id or not survey_id:
-            return Response({"error": "User and Survey are required in query parameters."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "User and Survey are required in query parameters"}, status=status.HTTP_400_BAD_REQUEST)
         try:
             user = AppUser.objects.get(id=user_id)
             survey = Survey.objects.get(id=survey_id)
         except (AppUser.DoesNotExist, Survey.DoesNotExist):
-            return Response({"error": "Invalid user or survey ID."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Not found user or survey"}, status=status.HTTP_404_NOT_FOUND)
         survey_questions = Question.objects.filter(survey=survey)
         answered_question_ids = {answer['question'] for answer in answers}
 
         missing_questions = survey_questions.exclude(id__in=answered_question_ids)
         if missing_questions.exists():
-            return Response({"error": "Answers are missing for some questions."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Answers are missing for some questions"}, status=status.HTTP_400_BAD_REQUEST)
         try:
             with transaction.atomic():
                 created_answers = []
