@@ -96,7 +96,7 @@ DATABASES = {
         'NAME': 'surveys',
         'USER': 'Lizka',
         'PASSWORD': '0000',
-        'HOST': 'survey_db',
+        'HOST': 'db',
         'PORT': '5000',
     }
 }
