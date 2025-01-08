@@ -1,0 +1,39 @@
+name: blogapp
+
+services:
+  db:
+    image: postgres:latest
+    container_name: survey_db
+    environment:
+      POSTGRES_DB: surveys
+      POSTGRES_USER: Lizka
+      POSTGRES_PASSWORD: 0000
+    volumes:
+      - data:/var/lib/postgresql/data
+      #- ./sql_scripts:/docker-entrypoint-initdb.d/
+    ports:
+      - "5000:5000"
+    networks:
+      - survey_network
+
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks:
+      - survey_network
+
+
+volumes:
+  data:
+    driver: local
+
+networks:
+  survey_network:
+    driver: bridge
+
