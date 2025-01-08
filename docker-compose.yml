@@ -6,8 +6,8 @@ services:
     container_name: survey_db
     environment:
       POSTGRES_DB: surveys
-      POSTGRES_USER: Lizka
-      POSTGRES_PASSWORD: 0000
+      POSTGRES_USER: surveys
+      POSTGRES_PASSWORD: 2946
     volumes:
       - data:/var/lib/postgresql/data
       #- ./sql_scripts:/docker-entrypoint-initdb.d/
@@ -17,7 +17,6 @@ services:
       - survey_network
     command: postgres -p 5000
 
-
   web:
     build:
       context: .
@@ -26,10 +25,8 @@ services:
       - "8000:8000"
     environment:
       - PYTHONUNBUFFERED=1
-      - DATABASE_URL=postgres://Lizka:0000@db:5000/surveys
     networks:
       - survey_network
-
 
 volumes:
   data:
