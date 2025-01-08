@@ -6,8 +6,8 @@ services:
     container_name: survey_db
     environment:
       POSTGRES_DB: surveys
-      POSTGRES_USER: surveys
-      POSTGRES_PASSWORD: 2946
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1440
     volumes:
       - data:/var/lib/postgresql/data
       #- ./sql_scripts:/docker-entrypoint-initdb.d/
