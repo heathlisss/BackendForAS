@@ -1,6 +1,7 @@
 from django.contrib.auth.hashers import make_password, check_password
 from django.db import transaction
 from django.db.models import Q
+from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -324,18 +325,27 @@ class AnswerView(TokenAuthenticationMixin, APIView):
         survey_id = request.GET.get('survey')
         answers = request.data
         if not user_id or not survey_id:
-            return Response({"error": "User and Survey are required in query parameters"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "User and Survey are required in query parameters"},
+                            status=status.HTTP_400_BAD_REQUEST)
+
         try:
             user = AppUser.objects.get(id=user_id)
             survey = Survey.objects.get(id=survey_id)
         except (AppUser.DoesNotExist, Survey.DoesNotExist):
             return Response({"error": "Not found user or survey"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Проверка активности опроса
+        current_date = timezone.now().date()
+        if not (survey.start_date <= current_date and (survey.end_date is None or survey.end_date > current_date)):
+            return Response({"error": "Survey is not active"}, status=status.HTTP_400_BAD_REQUEST)
+
         survey_questions = Question.objects.filter(survey=survey)
         answered_question_ids = {answer['question'] for answer in answers}
 
         missing_questions = survey_questions.exclude(id__in=answered_question_ids)
         if missing_questions.exists():
             return Response({"error": "Answers are missing for some questions"}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
             with transaction.atomic():
                 created_answers = []

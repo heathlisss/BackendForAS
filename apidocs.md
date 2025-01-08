@@ -140,6 +140,7 @@ Response: **201_CREATED**
     "description": "Как т?",
     "start_date": "2025-12-25",
     "end_date": "2026-01-31",
+    "activity": true,
     "admins": [
         7
     ],
@@ -378,6 +379,11 @@ Errors: **400_BAD_REQUEST**
 ```
 {
     "error": "Answers are missing for some questions."
+}
+```
+```
+{
+    "error": "Survey is not active"
 }
 ```
 **404_NOT_FOUND**
