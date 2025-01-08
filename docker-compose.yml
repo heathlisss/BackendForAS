@@ -1,7 +1,7 @@
-name: blogapp
+name: surveyapp
 
 services:
-  db:
+  db_survey:
     image: postgres:latest
     container_name: survey_db
     environment:
