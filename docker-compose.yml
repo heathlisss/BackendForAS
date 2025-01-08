@@ -12,9 +12,10 @@ services:
       - data:/var/lib/postgresql/data
       #- ./sql_scripts:/docker-entrypoint-initdb.d/
     ports:
-      - "5000:5432"
+      - "5000:5000"
     networks:
       - survey_network
+    command: postgres -p 5000
 
 
   web:

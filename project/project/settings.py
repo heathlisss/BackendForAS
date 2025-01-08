@@ -97,7 +97,7 @@ DATABASES = {
         'USER': 'Lizka',
         'PASSWORD': '0000',
         'HOST': 'db_survey',
-        'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+        'PORT': '5000',
     }
 }
 
